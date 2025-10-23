@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Crown, Play, ArrowDown, Edit, Save, RefreshCw, MessageCircle, HeartCrack, Zap, Sparkles, ThumbsUp, ThumbsDown, Siren, Skull, Star, MicStage, Music, Users } from 'lucide-react';
+import { Crown, Play, ArrowDown, Edit, Save, RefreshCw, MessageCircle, HeartCrack, Zap, Sparkles, ThumbsUp, ThumbsDown, Siren, Skull, Star, Mic, Music, Users } from 'lucide-react';
 
 // --- Types ---
 
@@ -134,22 +134,21 @@ const S16_EPISODES: Episode[] = [
   { id: 14, title: "Booked and Blessed", format: 'STANDARD', participatingGroups: 'ALL', challenge: { name: "Memoir Branding", type: ['branding', 'comedy'], description: "Write and market your own memoir." } },
 ];
 
-// Pre-assigned groups for S13 based on Ep 1 results to simplify simulation structure
-// Group 1 = Winners Circle (+ Elliott), Group 2 = Porkchop Loading Dock (- Elliott)
+// S13 groups start merged so Episode 1 can split them into Winners Circle and Porkchop crew
 const S13_QUEENS: Queen[] = [
-  { id: 'symone', name: 'Symone', entranceLine: 'I\'m here!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/7/74/Symone.jpg', group: 1, stats: { design: 7, comedy: 8, acting: 10, improv: 8, dance: 6, lipsync: 9, singing: 5, branding: 10 }, trackRecord: [], status: 'active' },
-  { id: 'kandy', name: 'Kandy Muse', entranceLine: 'From the hood to Hollywood!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/c/c0/KandyMuse.jpg', group: 1, stats: { design: 4, comedy: 8, acting: 7, improv: 6, dance: 6, lipsync: 9, singing: 5, branding: 9 }, trackRecord: [], status: 'active' },
-  { id: 'gottmik', name: 'Gottmik', entranceLine: 'Time to crash the system.', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/1/16/Gottmik.jpg', group: 1, stats: { design: 10, comedy: 9, acting: 6, improv: 8, dance: 3, lipsync: 5, singing: 2, branding: 9 }, trackRecord: [], status: 'active' },
-  { id: 'rose', name: 'Rosé', entranceLine: 'Coming up Rosé!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/b/b6/Ros%C3%A9.jpg', group: 2, stats: { design: 7, comedy: 8, acting: 9, improv: 7, dance: 9, lipsync: 8, singing: 10, branding: 7 }, trackRecord: [], status: 'active' },
-  { id: 'olivia', name: 'Olivia Lux', entranceLine: 'Light up the room!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/a/a3/OliviaLux.jpg', group: 1, stats: { design: 7, comedy: 5, acting: 7, improv: 6, dance: 8, lipsync: 8, singing: 9, branding: 8 }, trackRecord: [], status: 'active' },
-  { id: 'utica', name: 'Utica Queen', entranceLine: 'Don\'t pop the corn yet!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/3/36/UticaQueen.jpg', group: 2, stats: { design: 10, comedy: 6, acting: 4, improv: 6, dance: 4, lipsync: 7, singing: 3, branding: 7 }, trackRecord: [], status: 'active' },
-  { id: 'tina', name: 'Tina Burner', entranceLine: 'Turn it and burn it!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/6/67/TinaBurner.jpg', group: 1, stats: { design: 5, comedy: 7, acting: 8, improv: 6, dance: 7, lipsync: 7, singing: 8, branding: 8 }, trackRecord: [], status: 'active' },
-  { id: 'denali', name: 'Denali', entranceLine: 'Triple axel, double loop!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/a/ad/Denali.jpg', group: 2, stats: { design: 7, comedy: 5, acting: 6, improv: 5, dance: 10, lipsync: 10, singing: 6, branding: 6 }, trackRecord: [], status: 'active' },
-  { id: 'elliott', name: 'Elliott with 2 Ts', entranceLine: 'Double the T!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/2/28/Elliottwith2Ts.jpg', group: 1, stats: { design: 6, comedy: 4, acting: 5, improv: 3, dance: 9, lipsync: 8, singing: 4, branding: 5 }, trackRecord: [], status: 'active' },
-  { id: 'lala', name: 'LaLa Ri', entranceLine: 'Saint or sinner?', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/3/34/LaLaRi.jpg', group: 1, stats: { design: 2, comedy: 7, acting: 5, improv: 5, dance: 9, lipsync: 10, singing: 4, branding: 7 }, trackRecord: [], status: 'active' },
-  { id: 'tamisha', name: 'Tamisha Iman', entranceLine: 'The legend has arrived.', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/4/4f/TamishaIman.jpg', group: 2, stats: { design: 8, comedy: 5, acting: 5, improv: 4, dance: 6, lipsync: 7, singing: 3, branding: 6 }, trackRecord: [], status: 'active' },
-  { id: 'joey', name: 'Joey Jay', entranceLine: 'Filler queen? I don\'t think so.', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/e/e8/JoeyJay.jpg', group: 2, stats: { design: 4, comedy: 5, acting: 5, improv: 4, dance: 8, lipsync: 6, singing: 4, branding: 5 }, trackRecord: [], status: 'active' },
-  { id: 'kahmora', name: 'Kahmora Hall', entranceLine: 'From the house of Hall!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/e/ed/KahmoraHall.jpg', group: 2, stats: { design: 9, comedy: 2, acting: 2, improv: 2, dance: 3, lipsync: 4, singing: 2, branding: 6 }, trackRecord: [], status: 'active' },
+  { id: 'symone', name: 'Symone', entranceLine: 'I\'m here!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/7/74/Symone.jpg', group: 3, stats: { design: 7, comedy: 8, acting: 10, improv: 8, dance: 6, lipsync: 9, singing: 5, branding: 10 }, trackRecord: [], status: 'active' },
+  { id: 'kandy', name: 'Kandy Muse', entranceLine: 'From the hood to Hollywood!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/c/c0/KandyMuse.jpg', group: 3, stats: { design: 4, comedy: 8, acting: 7, improv: 6, dance: 6, lipsync: 9, singing: 5, branding: 9 }, trackRecord: [], status: 'active' },
+  { id: 'gottmik', name: 'Gottmik', entranceLine: 'Time to crash the system.', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/1/16/Gottmik.jpg', group: 3, stats: { design: 10, comedy: 9, acting: 6, improv: 8, dance: 3, lipsync: 5, singing: 2, branding: 9 }, trackRecord: [], status: 'active' },
+  { id: 'rose', name: 'Rosé', entranceLine: 'Coming up Rosé!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/b/b6/Ros%C3%A9.jpg', group: 3, stats: { design: 7, comedy: 8, acting: 9, improv: 7, dance: 9, lipsync: 8, singing: 10, branding: 7 }, trackRecord: [], status: 'active' },
+  { id: 'olivia', name: 'Olivia Lux', entranceLine: 'Light up the room!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/a/a3/OliviaLux.jpg', group: 3, stats: { design: 7, comedy: 5, acting: 7, improv: 6, dance: 8, lipsync: 8, singing: 9, branding: 8 }, trackRecord: [], status: 'active' },
+  { id: 'utica', name: 'Utica Queen', entranceLine: 'Don\'t pop the corn yet!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/3/36/UticaQueen.jpg', group: 3, stats: { design: 10, comedy: 6, acting: 4, improv: 6, dance: 4, lipsync: 7, singing: 3, branding: 7 }, trackRecord: [], status: 'active' },
+  { id: 'tina', name: 'Tina Burner', entranceLine: 'Turn it and burn it!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/6/67/TinaBurner.jpg', group: 3, stats: { design: 5, comedy: 7, acting: 8, improv: 6, dance: 7, lipsync: 7, singing: 8, branding: 8 }, trackRecord: [], status: 'active' },
+  { id: 'denali', name: 'Denali', entranceLine: 'Triple axel, double loop!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/a/ad/Denali.jpg', group: 3, stats: { design: 7, comedy: 5, acting: 6, improv: 5, dance: 10, lipsync: 10, singing: 6, branding: 6 }, trackRecord: [], status: 'active' },
+  { id: 'elliott', name: 'Elliott with 2 Ts', entranceLine: 'Double the T!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/2/28/Elliottwith2Ts.jpg', group: 3, stats: { design: 6, comedy: 4, acting: 5, improv: 3, dance: 9, lipsync: 8, singing: 4, branding: 5 }, trackRecord: [], status: 'active' },
+  { id: 'lala', name: 'LaLa Ri', entranceLine: 'Saint or sinner?', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/3/34/LaLaRi.jpg', group: 3, stats: { design: 2, comedy: 7, acting: 5, improv: 5, dance: 9, lipsync: 10, singing: 4, branding: 7 }, trackRecord: [], status: 'active' },
+  { id: 'tamisha', name: 'Tamisha Iman', entranceLine: 'The legend has arrived.', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/4/4f/TamishaIman.jpg', group: 3, stats: { design: 8, comedy: 5, acting: 5, improv: 4, dance: 6, lipsync: 7, singing: 3, branding: 6 }, trackRecord: [], status: 'active' },
+  { id: 'joey', name: 'Joey Jay', entranceLine: 'Filler queen? I don\'t think so.', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/e/e8/JoeyJay.jpg', group: 3, stats: { design: 4, comedy: 5, acting: 5, improv: 4, dance: 8, lipsync: 6, singing: 4, branding: 5 }, trackRecord: [], status: 'active' },
+  { id: 'kahmora', name: 'Kahmora Hall', entranceLine: 'From the house of Hall!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/e/ed/KahmoraHall.jpg', group: 3, stats: { design: 9, comedy: 2, acting: 2, improv: 2, dance: 3, lipsync: 4, singing: 2, branding: 6 }, trackRecord: [], status: 'active' },
 ];
 
 const S13_EPISODES: Episode[] = [
@@ -168,6 +167,28 @@ const S13_EPISODES: Episode[] = [
   { id: 13, title: "Henny, I Shrunk the Queens!", format: 'STANDARD', participatingGroups: 'ALL', challenge: { name: "Sci-Fi Acting", type: ['acting'], description: "Star in the sci-fi adventure movie." } },
   { id: 14, title: "Gettin' Lucky", format: 'TOP2_NOELIM', participatingGroups: 'ALL', challenge: { name: "Lucky Verses", type: ['dance', 'singing'], description: "Write verses and perform in RuPaul's 'Lucky'." } },
 ];
+
+const S13_PORKCHOP_MATCHUPS = [
+  { queens: ['joey', 'kandy'], song: '"Call Me Maybe" by Carly Rae Jepsen', winner: 'kandy' },
+  { queens: ['denali', 'lala'], song: '"When I Grow Up" by The Pussycat Dolls', winner: 'lala' },
+  { queens: ['symone', 'tamisha'], song: '"The Pleasure Principle" by Janet Jackson', winner: 'symone' },
+  { queens: ['gottmik', 'utica'], song: '"Rumors" by Lindsay Lohan', winner: 'gottmik' },
+  { queens: ['olivia', 'rose'], song: '"Ex\'s & Oh\'s" by Elle King', winner: 'olivia' },
+  { queens: ['elliott', 'kahmora', 'tina'], song: '"Lady Marmalade" by Christina Aguilera, Lil\' Kim, Mýa, Pink', winner: 'tina' },
+];
+
+const S13_PORKCHOP_VOTE = {
+  eliminated: 'elliott',
+  votes: [
+    { voter: 'joey', votedFor: 'elliott' },
+    { voter: 'denali', votedFor: 'elliott' },
+    { voter: 'tamisha', votedFor: 'elliott' },
+    { voter: 'utica', votedFor: 'elliott' },
+    { voter: 'rose', votedFor: 'elliott' },
+    { voter: 'kahmora', votedFor: 'elliott' },
+    { voter: 'elliott', votedFor: 'utica' },
+  ],
+};
 
 const SEASONS: Record<string, Season> = {
   s16: { id: 's16', name: 'Season 16', queens: S16_QUEENS, episodes: S16_EPISODES, logoColor: 'from-pink-500 to-cyan-500' },
@@ -306,13 +327,39 @@ export default function DragRaceSimulator() {
 
   const startPerformance = () => {
       if (activeEpisode.format === 'LIPSYNC_TOURNAMENT') {
-         // Mock performance feed for Lip Sync tournament
-         const feed = participatingQueens.map(q => ({
-             queen: q, 
-             text: q.group === 1 ? "wins their lip-sync battle!" : "loses their lip-sync battle.",
-             score: q.group === 1 ? 10 : 5
-         }));
-         setPerformanceFeed(feed);
+         if (currentSeason.id === 's13' && activeEpisode.id === 1) {
+            const queenMap = new Map(queens.map(q => [q.id, q] as const));
+            const feed = S13_PORKCHOP_MATCHUPS.flatMap(match => (
+              match.queens.map(queenId => {
+                const queen = queenMap.get(queenId);
+                if (!queen) return null;
+                const opponents = match.queens
+                  .filter(id => id !== queenId)
+                  .map(id => queenMap.get(id)?.name)
+                  .filter(Boolean) as string[];
+                const opponentText = opponents.length === 0
+                  ? ''
+                  : opponents.length === 1
+                    ? ` against ${opponents[0]}`
+                    : ` against ${opponents.slice(0, -1).join(', ')} and ${opponents.slice(-1)}`;
+                const isWinner = queenId === match.winner;
+                const isEliminated = queenId === S13_PORKCHOP_VOTE.eliminated;
+                return {
+                  queen,
+                  text: `${isWinner ? 'wins' : 'loses'} the lip-sync to ${match.song}${opponentText}.`,
+                  score: isWinner ? 10 : (isEliminated ? 3 : 5),
+                };
+              }).filter(Boolean) as { queen: Queen, text: string, score: number }[]
+            ));
+            setPerformanceFeed(feed);
+         } else {
+            const feed = participatingQueens.map(q => ({
+                queen: q,
+                text: q.group === 1 ? "wins their lip-sync battle!" : "loses their lip-sync battle.",
+                score: q.group === 1 ? 10 : 5
+            }));
+            setPerformanceFeed(feed);
+         }
          setPhase('PERFORMANCE');
          return;
       }
@@ -335,18 +382,49 @@ export default function DragRaceSimulator() {
     const count = scored.length;
 
     if (activeEpisode.format === 'LIPSYNC_TOURNAMENT') {
-        scored.forEach(item => newPlacements[item.queen.id] = item.queen.group === 1 ? 'WIN' : 'LOW');
+        if (currentSeason.id === 's13' && activeEpisode.id === 1) {
+            const winners = new Set(S13_PORKCHOP_MATCHUPS.map(match => match.winner));
+            const eliminatedId = S13_PORKCHOP_VOTE.eliminated;
+            participatingQueens.forEach(q => {
+                if (q.id === eliminatedId) newPlacements[q.id] = 'ELIM';
+                else if (winners.has(q.id)) newPlacements[q.id] = 'WIN';
+                else newPlacements[q.id] = 'LOW';
+            });
+            const queenMap = new Map(queens.map(q => [q.id, q] as const));
+            const eliminatedQueen = queenMap.get(eliminatedId);
+            if (eliminatedQueen) {
+                const votes = S13_PORKCHOP_VOTE.votes.map(vote => {
+                    const voter = queenMap.get(vote.voter);
+                    const votedFor = queenMap.get(vote.votedFor) || eliminatedQueen;
+                    return voter ? { voter, votedFor } : null;
+                }).filter(Boolean) as { voter: Queen, votedFor: Queen }[];
+                setGoHomeVotes(votes);
+            } else {
+                setGoHomeVotes([]);
+            }
+            setSimulatedPlacements(newPlacements);
+            setPhase('WHO_SHOULD_GO_HOME');
+            return;
+        } else {
+            scored.forEach(item => newPlacements[item.queen.id] = item.queen.group === 1 ? 'WIN' : 'LOW');
+            setGoHomeVotes([]);
+            setSimulatedPlacements(newPlacements);
+            setPhase('CRITIQUES');
+            return;
+        }
     } else if (activeEpisode.format === 'TOP2_NOELIM') {
+       const highSlots = Math.min(2, Math.max(1, Math.round(count / 4)));
        scored.forEach((q, i) => {
            if (i <= 1) newPlacements[q.queen.id] = 'TOP2';
-           else if (i <= Math.ceil(count/3)) newPlacements[q.queen.id] = 'HIGH';
+           else if (i <= 1 + highSlots) newPlacements[q.queen.id] = 'HIGH';
            else if (i >= count - Math.max(2, Math.floor(count/4))) newPlacements[q.queen.id] = 'LOW';
            else newPlacements[q.queen.id] = 'SAFE';
        });
     } else {
+       const highSlots = Math.min(2, Math.max(1, Math.round(count / 4)));
        scored.forEach((q, i) => {
           if (i === 0) newPlacements[q.queen.id] = 'WIN';
-          else if (i <= Math.ceil(count/4)) newPlacements[q.queen.id] = 'HIGH';
+          else if (i <= highSlots) newPlacements[q.queen.id] = 'HIGH';
           else if (i >= count - 2) newPlacements[q.queen.id] = 'BTM2';
           else if (i >= count - 3 && count > 6) newPlacements[q.queen.id] = 'LOW';
           else newPlacements[q.queen.id] = 'SAFE';
@@ -386,17 +464,29 @@ export default function DragRaceSimulator() {
   };
 
   const finalizeEpisode = (lipSyncWinnerId?: string) => {
+      const isS13Porkchop = currentSeason.id === 's13' && activeEpisode.id === 1 && activeEpisode.format === 'LIPSYNC_TOURNAMENT';
+      const porkchopWinners = isS13Porkchop ? new Set(S13_PORKCHOP_MATCHUPS.map(match => match.winner)) : null;
+      const porkchopReturnId = isS13Porkchop ? S13_PORKCHOP_VOTE.eliminated : null;
       setQueens(prev => prev.map(q => {
           if (q.status === 'eliminated') return q;
           if (!participatingQueens.some(pq => pq.id === q.id)) {
               return (q.trackRecord.length === episodeIndex) ? { ...q, trackRecord: [...q.trackRecord, ' '] } : q;
           }
-          let p = simulatedPlacements[q.id];
-          if (activeEpisode.format === 'TOP2_NOELIM') {
-             if (q.id === lipSyncWinnerId) p = 'WIN';
-             else if (p === 'WIN' && lipSyncWinnerId && q.id !== lipSyncWinnerId) p = 'TOP2';
+          let placement = simulatedPlacements[q.id];
+          if (isS13Porkchop) {
+              const fallbackPlacement = porkchopWinners?.has(q.id) ? 'WIN' : (q.id === porkchopReturnId ? 'ELIM' : 'LOW');
+              const newGroup: 1 | 2 = (porkchopWinners?.has(q.id) || q.id === porkchopReturnId) ? 1 : 2;
+              return {
+                  ...q,
+                  group: newGroup,
+                  trackRecord: [...q.trackRecord, placement || fallbackPlacement],
+              };
           }
-          return { ...q, trackRecord: [...q.trackRecord, p] };
+          if (activeEpisode.format === 'TOP2_NOELIM') {
+             if (q.id === lipSyncWinnerId) placement = 'WIN';
+             else if (placement === 'WIN' && lipSyncWinnerId && q.id !== lipSyncWinnerId) placement = 'TOP2';
+          }
+          return { ...q, trackRecord: [...q.trackRecord, placement] };
       }));
       startNextEpisode();
   };
@@ -500,7 +590,7 @@ export default function DragRaceSimulator() {
           <div className="min-h-screen bg-slate-950 flex flex-col items-center p-6 text-white relative pb-32">
               <div className="max-w-3xl w-full z-10 mt-8">
                   <h2 className="text-3xl font-black text-center mb-12 flex items-center justify-center gap-3 uppercase tracking-widest">
-                      {phase === 'EVENTS' ? <><MessageCircle /> Werkroom Highlights</> : <><MicStage /> Main Stage</>}
+                      {phase === 'EVENTS' ? <><MessageCircle /> Werkroom Highlights</> : <><Mic /> Main Stage</>}
                   </h2>
                   
                   <div className="space-y-4">
