@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Crown, Play, ArrowDown, Edit, Save, RefreshCw, MessageCircle, HeartCrack, Zap, Sparkles, ThumbsUp, ThumbsDown, Siren, Skull, Star, MicStage, Music, Users } from 'lucide-react';
+import { Crown, Play, ArrowDown, Edit, Save, RefreshCw, MessageCircle, HeartCrack, Zap, Sparkles, ThumbsUp, ThumbsDown, Siren, Skull, Star, Mic, Music, Users } from 'lucide-react';
 
 // --- Types ---
 
@@ -500,7 +500,7 @@ export default function DragRaceSimulator() {
           <div className="min-h-screen bg-slate-950 flex flex-col items-center p-6 text-white relative pb-32">
               <div className="max-w-3xl w-full z-10 mt-8">
                   <h2 className="text-3xl font-black text-center mb-12 flex items-center justify-center gap-3 uppercase tracking-widest">
-                      {phase === 'EVENTS' ? <><MessageCircle /> Werkroom Highlights</> : <><MicStage /> Main Stage</>}
+                      {phase === 'EVENTS' ? <><MessageCircle /> Werkroom Highlights</> : <><Mic /> Main Stage</>}
                   </h2>
                   
                   <div className="space-y-4">
