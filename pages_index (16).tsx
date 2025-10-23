@@ -64,20 +64,20 @@ interface PorkchopTournament {
 // --- CONSTANTS ---
 
 const PLACEMENT_COLORS: Record<Exclude<Placement, null>, string> = {
-  WIN: 'bg-emerald-500 text-white border border-emerald-600',
-  TOP2: 'bg-sky-400 text-white border border-sky-500',
-  HIGH: 'bg-blue-200 text-blue-900 border border-blue-300',
-  SAFE: 'bg-gray-100 text-gray-700 border border-gray-200',
-  LOW: 'bg-amber-200 text-amber-900 border border-amber-300',
-  LOSS: 'bg-rose-400 text-white border border-rose-500',
-  BTM2: 'bg-rose-500 text-white border border-rose-600',
-  ELIM: 'bg-red-600 text-white font-black border border-red-700',
-  ' ': 'bg-gray-50 text-gray-400 border border-gray-100',
+  WIN: 'bg-blue-400 text-blue-950 border border-blue-500',
+  TOP2: 'bg-cyan-300 text-cyan-950 border border-cyan-400',
+  HIGH: 'bg-blue-100 text-blue-900 border border-blue-200',
+  SAFE: 'bg-gray-50 text-gray-800 border border-gray-200',
+  LOW: 'bg-pink-100 text-pink-800 border border-pink-200',
+  LOSS: 'bg-red-200 text-red-900 border border-red-300',
+  BTM2: 'bg-red-300 text-red-950 border border-red-400',
+  ELIM: 'bg-red-600 text-white font-bold border border-red-700',
+  ' ': 'bg-gray-100 text-gray-400 border border-gray-200',
 };
 
 const LIPSYNC_TOURNAMENT_PLACEMENT_OVERRIDES: Partial<Record<Exclude<Placement, null>, string>> = {
-  WIN: 'bg-emerald-200 text-emerald-900 border border-emerald-300',
-  LOSS: 'bg-rose-200 text-rose-900 border border-rose-300',
+  WIN: 'bg-green-100 text-green-900 border border-green-200',
+  LOSS: 'bg-red-100 text-red-900 border border-red-200',
 };
 
 const getPlacementClasses = (
