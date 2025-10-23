@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Crown, Play, ArrowDown, Edit, Save, RefreshCw, MessageCircle, HeartCrack, Zap, Sparkles, ThumbsUp, ThumbsDown, Siren, Skull, Star, MicStage, Music, Users } from 'lucide-react';
+import { Crown, Play, ArrowDown, Edit, Save, RefreshCw, MessageCircle, HeartCrack, Zap, Sparkles, ThumbsUp, ThumbsDown, Siren, Skull, Star, Mic, Music, Users } from 'lucide-react';
 
 // --- Types ---
 
 type StatType = 'design' | 'comedy' | 'acting' | 'improv' | 'dance' | 'lipsync' | 'singing' | 'branding';
-type Placement = 'WIN' | 'TOP2' | 'HIGH' | 'SAFE' | 'LOW' | 'BTM2' | 'ELIM' | ' ' | null;
+type Placement = 'WIN' | 'TOP2' | 'HIGH' | 'SAFE' | 'LOW' | 'LOSS' | 'BTM2' | 'ELIM' | ' ' | null;
 type EpisodeFormat = 'STANDARD' | 'TOP2_NOELIM' | 'LIPSYNC_TOURNAMENT' | 'FINALE_LIPSYNC';
 type Phase = 'SEASON_SELECT' | 'START' | 'ENTRANCES' | 'EPISODE_INTRO' | 'EVENTS' | 'PERFORMANCE' | 'CRITIQUES' | 'WHO_SHOULD_GO_HOME' | 'PRODUCERS' | 'LIPSYNC' | 'ELIMINATION' | 'FINALE';
 
@@ -43,17 +43,55 @@ interface Season {
   logoColor: string;
 }
 
+interface PorkchopMatchup {
+  queens: string[];
+  song: string;
+  winnerId: string;
+  scores: Record<string, number>;
+}
+
+interface PorkchopVote {
+  voterId: string;
+  votedForId: string;
+}
+
+interface PorkchopTournament {
+  matchups: PorkchopMatchup[];
+  votes: PorkchopVote[];
+  eliminatedId: string;
+}
+
 // --- CONSTANTS ---
 
-const PLACEMENT_COLORS: Record<string, string> = {
-  WIN: 'bg-blue-400 text-blue-950 border-blue-500',
-  TOP2: 'bg-cyan-300 text-cyan-950 border-cyan-400',
-  HIGH: 'bg-blue-100 text-blue-900 border-blue-200',
-  SAFE: 'bg-gray-50 text-gray-800 border-gray-200',
-  LOW: 'bg-pink-100 text-pink-800 border-pink-200',
-  BTM2: 'bg-red-300 text-red-950 border-red-400',
-  ELIM: 'bg-red-600 text-white font-bold border-red-700',
-  ' ': 'bg-gray-100',
+const PLACEMENT_COLORS: Record<Exclude<Placement, null>, string> = {
+  WIN: 'bg-emerald-500 text-white border border-emerald-600',
+  TOP2: 'bg-sky-400 text-white border border-sky-500',
+  HIGH: 'bg-blue-200 text-blue-900 border border-blue-300',
+  SAFE: 'bg-gray-100 text-gray-700 border border-gray-200',
+  LOW: 'bg-amber-200 text-amber-900 border border-amber-300',
+  LOSS: 'bg-rose-400 text-white border border-rose-500',
+  BTM2: 'bg-rose-500 text-white border border-rose-600',
+  ELIM: 'bg-red-600 text-white font-black border border-red-700',
+  ' ': 'bg-gray-50 text-gray-400 border border-gray-100',
+};
+
+const LIPSYNC_TOURNAMENT_PLACEMENT_OVERRIDES: Partial<Record<Exclude<Placement, null>, string>> = {
+  WIN: 'bg-emerald-200 text-emerald-900 border border-emerald-300',
+  LOSS: 'bg-rose-200 text-rose-900 border border-rose-300',
+};
+
+const getPlacementClasses = (
+  placement: Placement | undefined | null,
+  options?: { tournament?: boolean }
+): string => {
+  if (!placement) return 'bg-white text-gray-700 border border-gray-200';
+  const key = placement as Exclude<Placement, null>;
+  if (key === ' ') return PLACEMENT_COLORS[key];
+  if (options?.tournament) {
+    const override = LIPSYNC_TOURNAMENT_PLACEMENT_OVERRIDES[key];
+    if (override) return override;
+  }
+  return PLACEMENT_COLORS[key] || 'bg-white text-gray-700 border border-gray-200';
 };
 
 // --- DATA: FLAVOR TEXT ---
@@ -134,22 +172,21 @@ const S16_EPISODES: Episode[] = [
   { id: 14, title: "Booked and Blessed", format: 'STANDARD', participatingGroups: 'ALL', challenge: { name: "Memoir Branding", type: ['branding', 'comedy'], description: "Write and market your own memoir." } },
 ];
 
-// Pre-assigned groups for S13 based on Ep 1 results to simplify simulation structure
-// Group 1 = Winners Circle (+ Elliott), Group 2 = Porkchop Loading Dock (- Elliott)
+// S13 groups start merged so Episode 1 can split them into Winners Circle and Porkchop crew
 const S13_QUEENS: Queen[] = [
-  { id: 'symone', name: 'Symone', entranceLine: 'I\'m here!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/7/74/Symone.jpg', group: 1, stats: { design: 7, comedy: 8, acting: 10, improv: 8, dance: 6, lipsync: 9, singing: 5, branding: 10 }, trackRecord: [], status: 'active' },
-  { id: 'kandy', name: 'Kandy Muse', entranceLine: 'From the hood to Hollywood!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/c/c0/KandyMuse.jpg', group: 1, stats: { design: 4, comedy: 8, acting: 7, improv: 6, dance: 6, lipsync: 9, singing: 5, branding: 9 }, trackRecord: [], status: 'active' },
-  { id: 'gottmik', name: 'Gottmik', entranceLine: 'Time to crash the system.', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/1/16/Gottmik.jpg', group: 1, stats: { design: 10, comedy: 9, acting: 6, improv: 8, dance: 3, lipsync: 5, singing: 2, branding: 9 }, trackRecord: [], status: 'active' },
-  { id: 'rose', name: 'Rosé', entranceLine: 'Coming up Rosé!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/b/b6/Ros%C3%A9.jpg', group: 2, stats: { design: 7, comedy: 8, acting: 9, improv: 7, dance: 9, lipsync: 8, singing: 10, branding: 7 }, trackRecord: [], status: 'active' },
-  { id: 'olivia', name: 'Olivia Lux', entranceLine: 'Light up the room!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/a/a3/OliviaLux.jpg', group: 1, stats: { design: 7, comedy: 5, acting: 7, improv: 6, dance: 8, lipsync: 8, singing: 9, branding: 8 }, trackRecord: [], status: 'active' },
-  { id: 'utica', name: 'Utica Queen', entranceLine: 'Don\'t pop the corn yet!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/3/36/UticaQueen.jpg', group: 2, stats: { design: 10, comedy: 6, acting: 4, improv: 6, dance: 4, lipsync: 7, singing: 3, branding: 7 }, trackRecord: [], status: 'active' },
-  { id: 'tina', name: 'Tina Burner', entranceLine: 'Turn it and burn it!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/6/67/TinaBurner.jpg', group: 1, stats: { design: 5, comedy: 7, acting: 8, improv: 6, dance: 7, lipsync: 7, singing: 8, branding: 8 }, trackRecord: [], status: 'active' },
-  { id: 'denali', name: 'Denali', entranceLine: 'Triple axel, double loop!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/a/ad/Denali.jpg', group: 2, stats: { design: 7, comedy: 5, acting: 6, improv: 5, dance: 10, lipsync: 10, singing: 6, branding: 6 }, trackRecord: [], status: 'active' },
-  { id: 'elliott', name: 'Elliott with 2 Ts', entranceLine: 'Double the T!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/2/28/Elliottwith2Ts.jpg', group: 1, stats: { design: 6, comedy: 4, acting: 5, improv: 3, dance: 9, lipsync: 8, singing: 4, branding: 5 }, trackRecord: [], status: 'active' },
-  { id: 'lala', name: 'LaLa Ri', entranceLine: 'Saint or sinner?', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/3/34/LaLaRi.jpg', group: 1, stats: { design: 2, comedy: 7, acting: 5, improv: 5, dance: 9, lipsync: 10, singing: 4, branding: 7 }, trackRecord: [], status: 'active' },
-  { id: 'tamisha', name: 'Tamisha Iman', entranceLine: 'The legend has arrived.', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/4/4f/TamishaIman.jpg', group: 2, stats: { design: 8, comedy: 5, acting: 5, improv: 4, dance: 6, lipsync: 7, singing: 3, branding: 6 }, trackRecord: [], status: 'active' },
-  { id: 'joey', name: 'Joey Jay', entranceLine: 'Filler queen? I don\'t think so.', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/e/e8/JoeyJay.jpg', group: 2, stats: { design: 4, comedy: 5, acting: 5, improv: 4, dance: 8, lipsync: 6, singing: 4, branding: 5 }, trackRecord: [], status: 'active' },
-  { id: 'kahmora', name: 'Kahmora Hall', entranceLine: 'From the house of Hall!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/e/ed/KahmoraHall.jpg', group: 2, stats: { design: 9, comedy: 2, acting: 2, improv: 2, dance: 3, lipsync: 4, singing: 2, branding: 6 }, trackRecord: [], status: 'active' },
+  { id: 'symone', name: 'Symone', entranceLine: 'I\'m here!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/7/74/Symone.jpg', group: 3, stats: { design: 7, comedy: 8, acting: 10, improv: 8, dance: 6, lipsync: 9, singing: 5, branding: 10 }, trackRecord: [], status: 'active' },
+  { id: 'kandy', name: 'Kandy Muse', entranceLine: 'From the hood to Hollywood!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/c/c0/KandyMuse.jpg', group: 3, stats: { design: 4, comedy: 8, acting: 7, improv: 6, dance: 6, lipsync: 9, singing: 5, branding: 9 }, trackRecord: [], status: 'active' },
+  { id: 'gottmik', name: 'Gottmik', entranceLine: 'Time to crash the system.', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/1/16/Gottmik.jpg', group: 3, stats: { design: 10, comedy: 9, acting: 6, improv: 8, dance: 3, lipsync: 5, singing: 2, branding: 9 }, trackRecord: [], status: 'active' },
+  { id: 'rose', name: 'Rosé', entranceLine: 'Coming up Rosé!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/b/b6/Ros%C3%A9.jpg', group: 3, stats: { design: 7, comedy: 8, acting: 9, improv: 7, dance: 9, lipsync: 8, singing: 10, branding: 7 }, trackRecord: [], status: 'active' },
+  { id: 'olivia', name: 'Olivia Lux', entranceLine: 'Light up the room!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/a/a3/OliviaLux.jpg', group: 3, stats: { design: 7, comedy: 5, acting: 7, improv: 6, dance: 8, lipsync: 8, singing: 9, branding: 8 }, trackRecord: [], status: 'active' },
+  { id: 'utica', name: 'Utica Queen', entranceLine: 'Don\'t pop the corn yet!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/3/36/UticaQueen.jpg', group: 3, stats: { design: 10, comedy: 6, acting: 4, improv: 6, dance: 4, lipsync: 7, singing: 3, branding: 7 }, trackRecord: [], status: 'active' },
+  { id: 'tina', name: 'Tina Burner', entranceLine: 'Turn it and burn it!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/6/67/TinaBurner.jpg', group: 3, stats: { design: 5, comedy: 7, acting: 8, improv: 6, dance: 7, lipsync: 7, singing: 8, branding: 8 }, trackRecord: [], status: 'active' },
+  { id: 'denali', name: 'Denali', entranceLine: 'Triple axel, double loop!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/a/ad/Denali.jpg', group: 3, stats: { design: 7, comedy: 5, acting: 6, improv: 5, dance: 10, lipsync: 10, singing: 6, branding: 6 }, trackRecord: [], status: 'active' },
+  { id: 'elliott', name: 'Elliott with 2 Ts', entranceLine: 'Double the T!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/2/28/Elliottwith2Ts.jpg', group: 3, stats: { design: 6, comedy: 4, acting: 5, improv: 3, dance: 9, lipsync: 8, singing: 4, branding: 5 }, trackRecord: [], status: 'active' },
+  { id: 'lala', name: 'LaLa Ri', entranceLine: 'Saint or sinner?', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/3/34/LaLaRi.jpg', group: 3, stats: { design: 2, comedy: 7, acting: 5, improv: 5, dance: 9, lipsync: 10, singing: 4, branding: 7 }, trackRecord: [], status: 'active' },
+  { id: 'tamisha', name: 'Tamisha Iman', entranceLine: 'The legend has arrived.', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/4/4f/TamishaIman.jpg', group: 3, stats: { design: 8, comedy: 5, acting: 5, improv: 4, dance: 6, lipsync: 7, singing: 3, branding: 6 }, trackRecord: [], status: 'active' },
+  { id: 'joey', name: 'Joey Jay', entranceLine: 'Filler queen? I don\'t think so.', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/e/e8/JoeyJay.jpg', group: 3, stats: { design: 4, comedy: 5, acting: 5, improv: 4, dance: 8, lipsync: 6, singing: 4, branding: 5 }, trackRecord: [], status: 'active' },
+  { id: 'kahmora', name: 'Kahmora Hall', entranceLine: 'From the house of Hall!', imageUrl: 'https://static.wikia.nocookie.net/logosrupaulsdragrace/images/e/ed/KahmoraHall.jpg', group: 3, stats: { design: 9, comedy: 2, acting: 2, improv: 2, dance: 3, lipsync: 4, singing: 2, branding: 6 }, trackRecord: [], status: 'active' },
 ];
 
 const S13_EPISODES: Episode[] = [
@@ -168,6 +205,81 @@ const S13_EPISODES: Episode[] = [
   { id: 13, title: "Henny, I Shrunk the Queens!", format: 'STANDARD', participatingGroups: 'ALL', challenge: { name: "Sci-Fi Acting", type: ['acting'], description: "Star in the sci-fi adventure movie." } },
   { id: 14, title: "Gettin' Lucky", format: 'TOP2_NOELIM', participatingGroups: 'ALL', challenge: { name: "Lucky Verses", type: ['dance', 'singing'], description: "Write verses and perform in RuPaul's 'Lucky'." } },
 ];
+
+const S13_PORKCHOP_SONGS: { song: string; size: number }[] = [
+  { song: '"Call Me Maybe" by Carly Rae Jepsen', size: 2 },
+  { song: '"When I Grow Up" by The Pussycat Dolls', size: 2 },
+  { song: '"The Pleasure Principle" by Janet Jackson', size: 2 },
+  { song: '"Rumors" by Lindsay Lohan', size: 2 },
+  { song: '"Ex\'s & Oh\'s" by Elle King', size: 2 },
+  { song: '"Lady Marmalade" by Christina Aguilera, Lil\' Kim, Mýa, Pink', size: 3 },
+];
+
+const createPorkchopTournament = (roster: Queen[]): PorkchopTournament => {
+  const activeQueens = roster.filter(q => q.status === 'active');
+  const shuffledQueens = [...activeQueens].sort(() => Math.random() - 0.5);
+  const scoresByQueen: Record<string, number> = {};
+  let cursor = 0;
+
+  const matchups: PorkchopMatchup[] = S13_PORKCHOP_SONGS.map(config => {
+    const contenders = shuffledQueens.slice(cursor, cursor + config.size);
+    cursor += config.size;
+    if (contenders.length < config.size) {
+      const needed = config.size - contenders.length;
+      contenders.push(...shuffledQueens.slice(0, needed));
+    }
+
+    let winnerId = contenders[0]?.id || '';
+    let bestScore = -Infinity;
+    const scores: Record<string, number> = {};
+
+    contenders.forEach(queen => {
+      if (!queen) return;
+      const rawScore = queen.stats.lipsync + Math.random() * 4;
+      const score = parseFloat((rawScore + Math.random() * 0.01).toFixed(2));
+      scores[queen.id] = score;
+      scoresByQueen[queen.id] = score;
+      if (score > bestScore || (score === bestScore && Math.random() > 0.5)) {
+        bestScore = score;
+        winnerId = queen.id;
+      }
+    });
+
+    return {
+      queens: contenders.filter(Boolean).map(q => q.id),
+      song: config.song,
+      winnerId,
+      scores,
+    };
+  });
+
+  const losers = matchups.flatMap(match => match.queens.filter(id => id !== match.winnerId));
+  const votes: PorkchopVote[] = losers.map(voterId => {
+    const options = losers.filter(id => id !== voterId);
+    if (options.length === 0) {
+      return { voterId, votedForId: voterId };
+    }
+    const sortedOptions = [...options].sort((a, b) => (scoresByQueen[a] ?? 0) - (scoresByQueen[b] ?? 0));
+    const primaryTarget = sortedOptions[0] ?? options[0];
+    const randomTarget = options[Math.floor(Math.random() * options.length)];
+    const votedForId = Math.random() < 0.65 ? primaryTarget : randomTarget;
+    return { voterId, votedForId };
+  });
+
+  const tally = new Map<string, number>();
+  votes.forEach(vote => {
+    tally.set(vote.votedForId, (tally.get(vote.votedForId) || 0) + 1);
+  });
+
+  const ranked = Array.from(tally.entries()).sort((a, b) => {
+    if (b[1] !== a[1]) return b[1] - a[1];
+    return (scoresByQueen[a[0]] ?? 0) - (scoresByQueen[b[0]] ?? 0);
+  });
+
+  const eliminatedId = ranked[0]?.[0] || (losers.length ? losers[Math.floor(Math.random() * losers.length)] : matchups[0]?.queens[0] || '');
+
+  return { matchups, votes, eliminatedId };
+};
 
 const SEASONS: Record<string, Season> = {
   s16: { id: 's16', name: 'Season 16', queens: S16_QUEENS, episodes: S16_EPISODES, logoColor: 'from-pink-500 to-cyan-500' },
@@ -223,11 +335,13 @@ const TrackRecordTable = ({ queens, episodeIdx, episodes }: { queens: Queen[], e
                    <span className={`truncate ${queen.status === 'eliminated' ? 'text-gray-400 font-normal' : ''}`}>{queen.name}</span>
                  </div>
               </td>
-              {episodes.slice(0, episodeIdx).map((_, i) => {
+              {episodes.slice(0, episodeIdx).map((episode, i) => {
                 const placement = queen.trackRecord[i] || ' ';
+                const isTournamentEpisode = episode?.format === 'LIPSYNC_TOURNAMENT';
+                const cellClasses = getPlacementClasses(placement, { tournament: isTournamentEpisode });
                 return (
                   <td key={i} className={`px-1 py-1 text-center border-r font-bold text-[10px]`}>
-                     <div className={`w-full h-full flex items-center justify-center rounded-sm ${PLACEMENT_COLORS[placement] || 'bg-white'}`}>
+                     <div className={`w-full h-full flex items-center justify-center rounded-sm ${cellClasses}`}>
                        {placement === ' ' ? '' : placement}
                      </div>
                   </td>
@@ -255,16 +369,24 @@ export default function DragRaceSimulator() {
   const [recentEliminated, setRecentEliminated] = useState<Queen | null>(null);
   const [performanceFeed, setPerformanceFeed] = useState<{queen: Queen, text: string, score: number}[]>([]);
   const [goHomeVotes, setGoHomeVotes] = useState<{voter: Queen, votedFor: Queen}[]>([]);
+  const [porkchopTournament, setPorkchopTournament] = useState<PorkchopTournament | null>(null);
 
   const activeEpisode = useMemo(() => currentSeason.episodes[episodeIndex] || currentSeason.episodes[currentSeason.episodes.length - 1], [currentSeason, episodeIndex]);
 
   const participatingQueens = useMemo(() => {
      if (!activeEpisode) return [];
-     return queens.filter(q => 
-       q.status === 'active' && 
+     return queens.filter(q =>
+       q.status === 'active' &&
        (activeEpisode.participatingGroups === 'ALL' || activeEpisode.participatingGroups.includes(q.group))
      );
   }, [queens, activeEpisode]);
+
+  useEffect(() => {
+    if (!activeEpisode) return;
+    if (currentSeason.id === 's13' && activeEpisode.id === 1 && activeEpisode.format === 'LIPSYNC_TOURNAMENT') {
+      setPorkchopTournament(prev => prev ?? createPorkchopTournament(queens));
+    }
+  }, [currentSeason.id, activeEpisode, queens]);
 
   const startSeason = (seasonId: string) => {
     const selectedSeason = SEASONS[seasonId];
@@ -272,6 +394,7 @@ export default function DragRaceSimulator() {
     setQueens(selectedSeason.queens.map(q => ({...q, trackRecord: [], status: 'active', eliminatedEpisode: undefined, tempStatModifier: 0})));
     setEpisodeIndex(-1);
     setWinner(null);
+    setPorkchopTournament(null);
     setPhase('ENTRANCES');
   };
 
@@ -288,8 +411,8 @@ export default function DragRaceSimulator() {
 
   const generateEvents = () => {
     if (activeEpisode.format === 'LIPSYNC_TOURNAMENT') {
-        // Special case for S13 Porkchop: Skip events, go straight to "performance" (battles)
-        setPhase('PERFORMANCE');
+        // Special case for S13 Porkchop: Skip events and jump directly into the battle performances
+        startPerformance();
         return;
     }
     const numEvents = Math.max(2, Math.min(4, Math.floor(participatingQueens.length / 3)));
@@ -306,13 +429,41 @@ export default function DragRaceSimulator() {
 
   const startPerformance = () => {
       if (activeEpisode.format === 'LIPSYNC_TOURNAMENT') {
-         // Mock performance feed for Lip Sync tournament
-         const feed = participatingQueens.map(q => ({
-             queen: q, 
-             text: q.group === 1 ? "wins their lip-sync battle!" : "loses their lip-sync battle.",
-             score: q.group === 1 ? 10 : 5
-         }));
-         setPerformanceFeed(feed);
+         if (currentSeason.id === 's13' && activeEpisode.id === 1) {
+            const tournament = porkchopTournament ?? createPorkchopTournament(queens);
+            if (!porkchopTournament) setPorkchopTournament(tournament);
+            const queenMap = new Map(queens.map(q => [q.id, q] as const));
+            const feed = tournament.matchups.flatMap(match => (
+              match.queens.map(queenId => {
+                const queen = queenMap.get(queenId);
+                if (!queen) return null;
+                const opponents = match.queens
+                  .filter(id => id !== queenId)
+                  .map(id => queenMap.get(id)?.name)
+                  .filter(Boolean) as string[];
+                const opponentText = opponents.length === 0
+                  ? ''
+                  : opponents.length === 1
+                    ? ` against ${opponents[0]}`
+                    : ` against ${opponents.slice(0, -1).join(', ')} and ${opponents.slice(-1)}`;
+                const isWinner = queenId === match.winnerId;
+                const baseText = `${isWinner ? 'wins' : 'loses'} the lip-sync to ${match.song}${opponentText}.`;
+                const text = isWinner
+                  ? `${baseText} Takes a spot in the Winners Circle.`
+                  : `${baseText} Heads to the Porkchop Loading Dock.`;
+                const score = match.scores[queenId] ?? (isWinner ? 10 : 5);
+                return { queen, text, score };
+              }).filter(Boolean) as { queen: Queen, text: string, score: number }[]
+            ));
+            setPerformanceFeed(feed);
+         } else {
+            const feed = participatingQueens.map(q => ({
+                queen: q,
+                text: q.group === 1 ? "wins their lip-sync battle!" : "loses their lip-sync battle.",
+                score: q.group === 1 ? 10 : 5
+            }));
+            setPerformanceFeed(feed);
+         }
          setPhase('PERFORMANCE');
          return;
       }
@@ -335,18 +486,46 @@ export default function DragRaceSimulator() {
     const count = scored.length;
 
     if (activeEpisode.format === 'LIPSYNC_TOURNAMENT') {
-        scored.forEach(item => newPlacements[item.queen.id] = item.queen.group === 1 ? 'WIN' : 'LOW');
+        if (currentSeason.id === 's13' && activeEpisode.id === 1) {
+            const tournament = porkchopTournament ?? createPorkchopTournament(queens);
+            if (!porkchopTournament) setPorkchopTournament(tournament);
+            const winners = new Set(tournament.matchups.map(match => match.winnerId));
+            const eliminatedId = tournament.eliminatedId;
+            participatingQueens.forEach(q => {
+                if (q.id === eliminatedId) newPlacements[q.id] = 'ELIM';
+                else if (winners.has(q.id)) newPlacements[q.id] = 'WIN';
+                else newPlacements[q.id] = 'LOSS';
+            });
+            const queenMap = new Map(queens.map(q => [q.id, q] as const));
+            const votes = tournament.votes.map(vote => {
+                const voter = queenMap.get(vote.voterId);
+                const votedFor = queenMap.get(vote.votedForId);
+                return voter && votedFor ? { voter, votedFor } : null;
+            }).filter(Boolean) as { voter: Queen, votedFor: Queen }[];
+            setGoHomeVotes(votes);
+            setSimulatedPlacements(newPlacements);
+            setPhase('WHO_SHOULD_GO_HOME');
+            return;
+        } else {
+            scored.forEach(item => newPlacements[item.queen.id] = item.queen.group === 1 ? 'WIN' : 'LOW');
+            setGoHomeVotes([]);
+            setSimulatedPlacements(newPlacements);
+            setPhase('CRITIQUES');
+            return;
+        }
     } else if (activeEpisode.format === 'TOP2_NOELIM') {
+       const highSlots = Math.min(2, Math.max(1, Math.round(count / 4)));
        scored.forEach((q, i) => {
            if (i <= 1) newPlacements[q.queen.id] = 'TOP2';
-           else if (i <= Math.ceil(count/3)) newPlacements[q.queen.id] = 'HIGH';
+           else if (i <= 1 + highSlots) newPlacements[q.queen.id] = 'HIGH';
            else if (i >= count - Math.max(2, Math.floor(count/4))) newPlacements[q.queen.id] = 'LOW';
            else newPlacements[q.queen.id] = 'SAFE';
        });
     } else {
+       const highSlots = Math.min(2, Math.max(1, Math.round(count / 4)));
        scored.forEach((q, i) => {
           if (i === 0) newPlacements[q.queen.id] = 'WIN';
-          else if (i <= Math.ceil(count/4)) newPlacements[q.queen.id] = 'HIGH';
+          else if (i <= highSlots) newPlacements[q.queen.id] = 'HIGH';
           else if (i >= count - 2) newPlacements[q.queen.id] = 'BTM2';
           else if (i >= count - 3 && count > 6) newPlacements[q.queen.id] = 'LOW';
           else newPlacements[q.queen.id] = 'SAFE';
@@ -386,17 +565,33 @@ export default function DragRaceSimulator() {
   };
 
   const finalizeEpisode = (lipSyncWinnerId?: string) => {
+      const isS13Porkchop = currentSeason.id === 's13' && activeEpisode.id === 1 && activeEpisode.format === 'LIPSYNC_TOURNAMENT';
+      const tournament = isS13Porkchop ? (porkchopTournament ?? createPorkchopTournament(queens)) : null;
+      if (isS13Porkchop && !porkchopTournament && tournament) {
+          setPorkchopTournament(tournament);
+      }
+      const porkchopWinners = tournament ? new Set(tournament.matchups.map(match => match.winnerId)) : null;
+      const porkchopReturnId = tournament?.eliminatedId || null;
       setQueens(prev => prev.map(q => {
           if (q.status === 'eliminated') return q;
           if (!participatingQueens.some(pq => pq.id === q.id)) {
               return (q.trackRecord.length === episodeIndex) ? { ...q, trackRecord: [...q.trackRecord, ' '] } : q;
           }
-          let p = simulatedPlacements[q.id];
-          if (activeEpisode.format === 'TOP2_NOELIM') {
-             if (q.id === lipSyncWinnerId) p = 'WIN';
-             else if (p === 'WIN' && lipSyncWinnerId && q.id !== lipSyncWinnerId) p = 'TOP2';
+          let placement = simulatedPlacements[q.id];
+          if (isS13Porkchop) {
+              const fallbackPlacement = porkchopWinners?.has(q.id) ? 'WIN' : (q.id === porkchopReturnId ? 'ELIM' : 'LOSS');
+              const newGroup: 1 | 2 = (porkchopWinners?.has(q.id) || q.id === porkchopReturnId) ? 1 : 2;
+              return {
+                  ...q,
+                  group: newGroup,
+                  trackRecord: [...q.trackRecord, placement || fallbackPlacement],
+              };
           }
-          return { ...q, trackRecord: [...q.trackRecord, p] };
+          if (activeEpisode.format === 'TOP2_NOELIM') {
+             if (q.id === lipSyncWinnerId) placement = 'WIN';
+             else if (placement === 'WIN' && lipSyncWinnerId && q.id !== lipSyncWinnerId) placement = 'TOP2';
+          }
+          return { ...q, trackRecord: [...q.trackRecord, placement] };
       }));
       startNextEpisode();
   };
@@ -500,7 +695,7 @@ export default function DragRaceSimulator() {
           <div className="min-h-screen bg-slate-950 flex flex-col items-center p-6 text-white relative pb-32">
               <div className="max-w-3xl w-full z-10 mt-8">
                   <h2 className="text-3xl font-black text-center mb-12 flex items-center justify-center gap-3 uppercase tracking-widest">
-                      {phase === 'EVENTS' ? <><MessageCircle /> Werkroom Highlights</> : <><MicStage /> Main Stage</>}
+                      {phase === 'EVENTS' ? <><MessageCircle /> Werkroom Highlights</> : <><Mic /> Main Stage</>}
                   </h2>
                   
                   <div className="space-y-4">
@@ -544,19 +739,26 @@ export default function DragRaceSimulator() {
                   <>
                       <h2 className="text-4xl font-black text-center mb-10 text-pink-900 uppercase">Judges Critiques</h2>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl w-full">
-                          {participatingQueens.filter(q => ['WIN','TOP2','HIGH','LOW','BTM2'].includes(simulatedPlacements[q.id]!)).map(q => (
-                              <div key={q.id} className="bg-white p-4 rounded-2xl shadow-md flex items-center gap-4 border border-pink-100">
+                          {participatingQueens
+                            .filter(q => ['WIN','TOP2','HIGH','LOW','BTM2'].includes(simulatedPlacements[q.id]!))
+                            .map(q => {
+                              const placement = simulatedPlacements[q.id]!;
+                              const placementLabel = placement === 'TOP2' ? 'TOP 2' : placement;
+                              const placementClasses = getPlacementClasses(placement, { tournament: activeEpisode.format === 'LIPSYNC_TOURNAMENT' });
+                              return (
+                                <div key={q.id} className="bg-white p-4 rounded-2xl shadow-md flex items-center gap-4 border border-pink-100">
                                   <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0">
                                       <QueenImage url={q.imageUrl} name={q.name} />
                                   </div>
                                   <div>
                                       <h3 className="font-bold text-lg">{q.name}</h3>
-                                      <span className={`text-xs font-bold px-2 py-1 rounded ${PLACEMENT_COLORS[simulatedPlacements[q.id]!]}`}>
-                                          {simulatedPlacements[q.id] === 'TOP2' ? 'TOP 2' : simulatedPlacements[q.id]}
+                                      <span className={`text-xs font-bold px-2 py-1 rounded ${placementClasses}`}>
+                                          {placementLabel}
                                       </span>
                                   </div>
-                              </div>
-                          ))}
+                                </div>
+                              );
+                            })}
                       </div>
                       <div className="fixed bottom-8 flex gap-4 z-20">
                           {activeEpisode.format === 'STANDARD' && (
@@ -617,13 +819,14 @@ export default function DragRaceSimulator() {
                               </div>
                               <div className="flex-grow min-w-0">
                                   <h3 className="font-bold truncate">{q.name}</h3>
-                                  <select 
-                                      className={`mt-1 w-full font-bold text-xs p-1.5 rounded border cursor-pointer ${PLACEMENT_COLORS[simulatedPlacements[q.id] || 'SAFE']}`}
+                                  <select
+                                      className={`mt-1 w-full font-bold text-xs p-1.5 rounded border cursor-pointer ${getPlacementClasses(simulatedPlacements[q.id] || 'SAFE', { tournament: activeEpisode.format === 'LIPSYNC_TOURNAMENT' })}`}
                                       value={simulatedPlacements[q.id] || 'SAFE'}
                                       onChange={(e) => setSimulatedPlacements(prev => ({...prev, [q.id]: e.target.value as Placement}))}
                                   >
                                       <option value="WIN">WIN</option><option value="TOP2">TOP2</option><option value="HIGH">HIGH</option>
-                                      <option value="SAFE">SAFE</option><option value="LOW">LOW</option><option value="BTM2">BTM2</option>
+                                      <option value="SAFE">SAFE</option><option value="LOW">LOW</option><option value="LOSS">LOSS</option>
+                                      <option value="BTM2">BTM2</option><option value="ELIM">ELIM</option>
                                   </select>
                               </div>
                           </div>
