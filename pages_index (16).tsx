@@ -4,7 +4,7 @@ import { Crown, Play, ArrowDown, Edit, Save, RefreshCw, MessageCircle, HeartCrac
 // --- Types ---
 
 type StatType = 'design' | 'comedy' | 'acting' | 'improv' | 'dance' | 'lipsync' | 'singing' | 'branding';
-type Placement = 'WIN' | 'TOP2' | 'HIGH' | 'SAFE' | 'LOW' | 'BTM2' | 'ELIM' | ' ' | null;
+type Placement = 'WIN' | 'TOP2' | 'HIGH' | 'SAFE' | 'LOW' | 'LOSS' | 'BTM2' | 'ELIM' | ' ' | null;
 type EpisodeFormat = 'STANDARD' | 'TOP2_NOELIM' | 'LIPSYNC_TOURNAMENT' | 'FINALE_LIPSYNC';
 type Phase = 'SEASON_SELECT' | 'START' | 'ENTRANCES' | 'EPISODE_INTRO' | 'EVENTS' | 'PERFORMANCE' | 'CRITIQUES' | 'WHO_SHOULD_GO_HOME' | 'PRODUCERS' | 'LIPSYNC' | 'ELIMINATION' | 'FINALE';
 
@@ -43,14 +43,33 @@ interface Season {
   logoColor: string;
 }
 
+interface PorkchopMatchup {
+  queens: string[];
+  song: string;
+  winnerId: string;
+  scores: Record<string, number>;
+}
+
+interface PorkchopVote {
+  voterId: string;
+  votedForId: string;
+}
+
+interface PorkchopTournament {
+  matchups: PorkchopMatchup[];
+  votes: PorkchopVote[];
+  eliminatedId: string;
+}
+
 // --- CONSTANTS ---
 
 const PLACEMENT_COLORS: Record<string, string> = {
-  WIN: 'bg-blue-400 text-blue-950 border-blue-500',
+  WIN: 'bg-green-300 text-green-950 border-green-400',
   TOP2: 'bg-cyan-300 text-cyan-950 border-cyan-400',
   HIGH: 'bg-blue-100 text-blue-900 border-blue-200',
   SAFE: 'bg-gray-50 text-gray-800 border-gray-200',
   LOW: 'bg-pink-100 text-pink-800 border-pink-200',
+  LOSS: 'bg-rose-200 text-rose-900 border-rose-300',
   BTM2: 'bg-red-300 text-red-950 border-red-400',
   ELIM: 'bg-red-600 text-white font-bold border-red-700',
   ' ': 'bg-gray-100',
@@ -168,26 +187,79 @@ const S13_EPISODES: Episode[] = [
   { id: 14, title: "Gettin' Lucky", format: 'TOP2_NOELIM', participatingGroups: 'ALL', challenge: { name: "Lucky Verses", type: ['dance', 'singing'], description: "Write verses and perform in RuPaul's 'Lucky'." } },
 ];
 
-const S13_PORKCHOP_MATCHUPS = [
-  { queens: ['joey', 'kandy'], song: '"Call Me Maybe" by Carly Rae Jepsen', winner: 'kandy' },
-  { queens: ['denali', 'lala'], song: '"When I Grow Up" by The Pussycat Dolls', winner: 'lala' },
-  { queens: ['symone', 'tamisha'], song: '"The Pleasure Principle" by Janet Jackson', winner: 'symone' },
-  { queens: ['gottmik', 'utica'], song: '"Rumors" by Lindsay Lohan', winner: 'gottmik' },
-  { queens: ['olivia', 'rose'], song: '"Ex\'s & Oh\'s" by Elle King', winner: 'olivia' },
-  { queens: ['elliott', 'kahmora', 'tina'], song: '"Lady Marmalade" by Christina Aguilera, Lil\' Kim, Mýa, Pink', winner: 'tina' },
+const S13_PORKCHOP_SONGS: { song: string; size: number }[] = [
+  { song: '"Call Me Maybe" by Carly Rae Jepsen', size: 2 },
+  { song: '"When I Grow Up" by The Pussycat Dolls', size: 2 },
+  { song: '"The Pleasure Principle" by Janet Jackson', size: 2 },
+  { song: '"Rumors" by Lindsay Lohan', size: 2 },
+  { song: '"Ex\'s & Oh\'s" by Elle King', size: 2 },
+  { song: '"Lady Marmalade" by Christina Aguilera, Lil\' Kim, Mýa, Pink', size: 3 },
 ];
 
-const S13_PORKCHOP_VOTE = {
-  eliminated: 'elliott',
-  votes: [
-    { voter: 'joey', votedFor: 'elliott' },
-    { voter: 'denali', votedFor: 'elliott' },
-    { voter: 'tamisha', votedFor: 'elliott' },
-    { voter: 'utica', votedFor: 'elliott' },
-    { voter: 'rose', votedFor: 'elliott' },
-    { voter: 'kahmora', votedFor: 'elliott' },
-    { voter: 'elliott', votedFor: 'utica' },
-  ],
+const createPorkchopTournament = (roster: Queen[]): PorkchopTournament => {
+  const activeQueens = roster.filter(q => q.status === 'active');
+  const shuffledQueens = [...activeQueens].sort(() => Math.random() - 0.5);
+  const scoresByQueen: Record<string, number> = {};
+  let cursor = 0;
+
+  const matchups: PorkchopMatchup[] = S13_PORKCHOP_SONGS.map(config => {
+    const contenders = shuffledQueens.slice(cursor, cursor + config.size);
+    cursor += config.size;
+    if (contenders.length < config.size) {
+      const needed = config.size - contenders.length;
+      contenders.push(...shuffledQueens.slice(0, needed));
+    }
+
+    let winnerId = contenders[0]?.id || '';
+    let bestScore = -Infinity;
+    const scores: Record<string, number> = {};
+
+    contenders.forEach(queen => {
+      if (!queen) return;
+      const rawScore = queen.stats.lipsync + Math.random() * 4;
+      const score = parseFloat((rawScore + Math.random() * 0.01).toFixed(2));
+      scores[queen.id] = score;
+      scoresByQueen[queen.id] = score;
+      if (score > bestScore || (score === bestScore && Math.random() > 0.5)) {
+        bestScore = score;
+        winnerId = queen.id;
+      }
+    });
+
+    return {
+      queens: contenders.filter(Boolean).map(q => q.id),
+      song: config.song,
+      winnerId,
+      scores,
+    };
+  });
+
+  const losers = matchups.flatMap(match => match.queens.filter(id => id !== match.winnerId));
+  const votes: PorkchopVote[] = losers.map(voterId => {
+    const options = losers.filter(id => id !== voterId);
+    if (options.length === 0) {
+      return { voterId, votedForId: voterId };
+    }
+    const sortedOptions = [...options].sort((a, b) => (scoresByQueen[a] ?? 0) - (scoresByQueen[b] ?? 0));
+    const primaryTarget = sortedOptions[0] ?? options[0];
+    const randomTarget = options[Math.floor(Math.random() * options.length)];
+    const votedForId = Math.random() < 0.65 ? primaryTarget : randomTarget;
+    return { voterId, votedForId };
+  });
+
+  const tally = new Map<string, number>();
+  votes.forEach(vote => {
+    tally.set(vote.votedForId, (tally.get(vote.votedForId) || 0) + 1);
+  });
+
+  const ranked = Array.from(tally.entries()).sort((a, b) => {
+    if (b[1] !== a[1]) return b[1] - a[1];
+    return (scoresByQueen[a[0]] ?? 0) - (scoresByQueen[b[0]] ?? 0);
+  });
+
+  const eliminatedId = ranked[0]?.[0] || (losers.length ? losers[Math.floor(Math.random() * losers.length)] : matchups[0]?.queens[0] || '');
+
+  return { matchups, votes, eliminatedId };
 };
 
 const SEASONS: Record<string, Season> = {
@@ -276,16 +348,24 @@ export default function DragRaceSimulator() {
   const [recentEliminated, setRecentEliminated] = useState<Queen | null>(null);
   const [performanceFeed, setPerformanceFeed] = useState<{queen: Queen, text: string, score: number}[]>([]);
   const [goHomeVotes, setGoHomeVotes] = useState<{voter: Queen, votedFor: Queen}[]>([]);
+  const [porkchopTournament, setPorkchopTournament] = useState<PorkchopTournament | null>(null);
 
   const activeEpisode = useMemo(() => currentSeason.episodes[episodeIndex] || currentSeason.episodes[currentSeason.episodes.length - 1], [currentSeason, episodeIndex]);
 
   const participatingQueens = useMemo(() => {
      if (!activeEpisode) return [];
-     return queens.filter(q => 
-       q.status === 'active' && 
+     return queens.filter(q =>
+       q.status === 'active' &&
        (activeEpisode.participatingGroups === 'ALL' || activeEpisode.participatingGroups.includes(q.group))
      );
   }, [queens, activeEpisode]);
+
+  useEffect(() => {
+    if (!activeEpisode) return;
+    if (currentSeason.id === 's13' && activeEpisode.id === 1 && activeEpisode.format === 'LIPSYNC_TOURNAMENT') {
+      setPorkchopTournament(prev => prev ?? createPorkchopTournament(queens));
+    }
+  }, [currentSeason.id, activeEpisode, queens]);
 
   const startSeason = (seasonId: string) => {
     const selectedSeason = SEASONS[seasonId];
@@ -293,6 +373,7 @@ export default function DragRaceSimulator() {
     setQueens(selectedSeason.queens.map(q => ({...q, trackRecord: [], status: 'active', eliminatedEpisode: undefined, tempStatModifier: 0})));
     setEpisodeIndex(-1);
     setWinner(null);
+    setPorkchopTournament(null);
     setPhase('ENTRANCES');
   };
 
@@ -328,8 +409,10 @@ export default function DragRaceSimulator() {
   const startPerformance = () => {
       if (activeEpisode.format === 'LIPSYNC_TOURNAMENT') {
          if (currentSeason.id === 's13' && activeEpisode.id === 1) {
+            const tournament = porkchopTournament ?? createPorkchopTournament(queens);
+            if (!porkchopTournament) setPorkchopTournament(tournament);
             const queenMap = new Map(queens.map(q => [q.id, q] as const));
-            const feed = S13_PORKCHOP_MATCHUPS.flatMap(match => (
+            const feed = tournament.matchups.flatMap(match => (
               match.queens.map(queenId => {
                 const queen = queenMap.get(queenId);
                 if (!queen) return null;
@@ -342,13 +425,13 @@ export default function DragRaceSimulator() {
                   : opponents.length === 1
                     ? ` against ${opponents[0]}`
                     : ` against ${opponents.slice(0, -1).join(', ')} and ${opponents.slice(-1)}`;
-                const isWinner = queenId === match.winner;
-                const isEliminated = queenId === S13_PORKCHOP_VOTE.eliminated;
-                return {
-                  queen,
-                  text: `${isWinner ? 'wins' : 'loses'} the lip-sync to ${match.song}${opponentText}.`,
-                  score: isWinner ? 10 : (isEliminated ? 3 : 5),
-                };
+                const isWinner = queenId === match.winnerId;
+                const baseText = `${isWinner ? 'wins' : 'loses'} the lip-sync to ${match.song}${opponentText}.`;
+                const text = isWinner
+                  ? `${baseText} Takes a spot in the Winners Circle.`
+                  : `${baseText} Heads to the Porkchop Loading Dock.`;
+                const score = match.scores[queenId] ?? (isWinner ? 10 : 5);
+                return { queen, text, score };
               }).filter(Boolean) as { queen: Queen, text: string, score: number }[]
             ));
             setPerformanceFeed(feed);
@@ -383,25 +466,22 @@ export default function DragRaceSimulator() {
 
     if (activeEpisode.format === 'LIPSYNC_TOURNAMENT') {
         if (currentSeason.id === 's13' && activeEpisode.id === 1) {
-            const winners = new Set(S13_PORKCHOP_MATCHUPS.map(match => match.winner));
-            const eliminatedId = S13_PORKCHOP_VOTE.eliminated;
+            const tournament = porkchopTournament ?? createPorkchopTournament(queens);
+            if (!porkchopTournament) setPorkchopTournament(tournament);
+            const winners = new Set(tournament.matchups.map(match => match.winnerId));
+            const eliminatedId = tournament.eliminatedId;
             participatingQueens.forEach(q => {
                 if (q.id === eliminatedId) newPlacements[q.id] = 'ELIM';
                 else if (winners.has(q.id)) newPlacements[q.id] = 'WIN';
-                else newPlacements[q.id] = 'LOW';
+                else newPlacements[q.id] = 'LOSS';
             });
             const queenMap = new Map(queens.map(q => [q.id, q] as const));
-            const eliminatedQueen = queenMap.get(eliminatedId);
-            if (eliminatedQueen) {
-                const votes = S13_PORKCHOP_VOTE.votes.map(vote => {
-                    const voter = queenMap.get(vote.voter);
-                    const votedFor = queenMap.get(vote.votedFor) || eliminatedQueen;
-                    return voter ? { voter, votedFor } : null;
-                }).filter(Boolean) as { voter: Queen, votedFor: Queen }[];
-                setGoHomeVotes(votes);
-            } else {
-                setGoHomeVotes([]);
-            }
+            const votes = tournament.votes.map(vote => {
+                const voter = queenMap.get(vote.voterId);
+                const votedFor = queenMap.get(vote.votedForId);
+                return voter && votedFor ? { voter, votedFor } : null;
+            }).filter(Boolean) as { voter: Queen, votedFor: Queen }[];
+            setGoHomeVotes(votes);
             setSimulatedPlacements(newPlacements);
             setPhase('WHO_SHOULD_GO_HOME');
             return;
@@ -465,8 +545,12 @@ export default function DragRaceSimulator() {
 
   const finalizeEpisode = (lipSyncWinnerId?: string) => {
       const isS13Porkchop = currentSeason.id === 's13' && activeEpisode.id === 1 && activeEpisode.format === 'LIPSYNC_TOURNAMENT';
-      const porkchopWinners = isS13Porkchop ? new Set(S13_PORKCHOP_MATCHUPS.map(match => match.winner)) : null;
-      const porkchopReturnId = isS13Porkchop ? S13_PORKCHOP_VOTE.eliminated : null;
+      const tournament = isS13Porkchop ? (porkchopTournament ?? createPorkchopTournament(queens)) : null;
+      if (isS13Porkchop && !porkchopTournament && tournament) {
+          setPorkchopTournament(tournament);
+      }
+      const porkchopWinners = tournament ? new Set(tournament.matchups.map(match => match.winnerId)) : null;
+      const porkchopReturnId = tournament?.eliminatedId || null;
       setQueens(prev => prev.map(q => {
           if (q.status === 'eliminated') return q;
           if (!participatingQueens.some(pq => pq.id === q.id)) {
@@ -474,7 +558,7 @@ export default function DragRaceSimulator() {
           }
           let placement = simulatedPlacements[q.id];
           if (isS13Porkchop) {
-              const fallbackPlacement = porkchopWinners?.has(q.id) ? 'WIN' : (q.id === porkchopReturnId ? 'ELIM' : 'LOW');
+              const fallbackPlacement = porkchopWinners?.has(q.id) ? 'WIN' : (q.id === porkchopReturnId ? 'ELIM' : 'LOSS');
               const newGroup: 1 | 2 = (porkchopWinners?.has(q.id) || q.id === porkchopReturnId) ? 1 : 2;
               return {
                   ...q,
@@ -713,7 +797,8 @@ export default function DragRaceSimulator() {
                                       onChange={(e) => setSimulatedPlacements(prev => ({...prev, [q.id]: e.target.value as Placement}))}
                                   >
                                       <option value="WIN">WIN</option><option value="TOP2">TOP2</option><option value="HIGH">HIGH</option>
-                                      <option value="SAFE">SAFE</option><option value="LOW">LOW</option><option value="BTM2">BTM2</option>
+                                      <option value="SAFE">SAFE</option><option value="LOW">LOW</option><option value="LOSS">LOSS</option>
+                                      <option value="BTM2">BTM2</option><option value="ELIM">ELIM</option>
                                   </select>
                               </div>
                           </div>
